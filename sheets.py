@@ -1,13 +1,18 @@
 from __future__ import print_function
 import pickle
 import os.path
+from os.path import basename
 from googleapiclient.discovery import build
-from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+from google_auth_oauthlib.flow import InstalledAppFlow
 
-import smtplib, ssl
+import smtplib, ssl, email
+from email import encoders
+from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
+
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
@@ -102,25 +107,21 @@ def tutorProcessing(teamlead, password, pMessage):
         body = """Please find your monthly feedback report attached below. Please let us know if you have any questions or want to discuss this report further!\n\n"""
         conclusion = "Cheers,\n" + teamleadName
         text = greeting + pMessage + "\n" + body + conclusion
-        """html = \
-            <html>
-            <body>
-                <p>Hi,<br>
-                How are you?<br>
-                <a href="http://www.realpython.com">Real Python</a> 
-                has many great tutorials.
-                </p>
-            </body>
-            </html>
-        """
-        # Turn these into plain/html MIMEText objects
-        part1 = MIMEText(text, "plain")
-        #part2 = MIMEText(html, "html")
+        
+        # Add plain-text parts to MIMEMultipart message
+        message.attach(MIMEText(text, "plain"))
+        
+        filename = "blank.pdf"
 
-        # Add HTML/plain-text parts to MIMEMultipart message
-        # The email client will try to render the last part first
-        message.attach(part1)
-        #message.attach(part2)
+        with open(filename, "rb") as fil:
+            part = MIMEApplication(
+                fil.read(),
+                Name=basename(filename)
+            )
+        
+        # After the file is closed
+        part['Content-Disposition'] = 'attachment; filename="%s"' % basename(filename)
+        message.attach(part)
 
         sendEmail(teamlead, password, tutorEmail, message.as_string())
         
