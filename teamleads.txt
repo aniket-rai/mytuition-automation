@@ -1,0 +1,1 @@
+aniket.rai@mytuition.co.nz,devdeep71,This is the message taken from the google sheets and automatically inserted into the Python program. Still working on attachments and formatting but getting there :)

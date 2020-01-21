@@ -5,14 +5,16 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
-import smtplib
+import smtplib, ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
-# The ID and range of a sample spreadsheet.
-SAMPLE_SPREADSHEET_ID = '1BgsuLlAtDi0oAt62C8ZhzDL45t82xMZLsr54ZShGTUA'
-SAMPLE_RANGE_NAME = 'Sheet1!A2:B8'
+# The ID and range of the spreadsheet.
+SPREADSHEET_ID = '1BgsuLlAtDi0oAt62C8ZhzDL45t82xMZLsr54ZShGTUA'
+RANGE_NAME = 'Sheet1!A2:C8'
 
 def getData():
     creds = None
@@ -38,65 +40,100 @@ def getData():
 
     # Call the Sheets API
     sheet = service.spreadsheets()
-    result = sheet.values().get(spreadsheetId=SAMPLE_SPREADSHEET_ID,
-                                range=SAMPLE_RANGE_NAME).execute()
+    result = sheet.values().get(spreadsheetId=SPREADSHEET_ID,
+                                range=RANGE_NAME).execute()
     values = result.get('values', [])
     
-    dataFile = open('data.txt', 'w')
+    dataFile = open('teamleads.txt', 'w')
 
     if not values:
         print('No data found.')
     else:
         for row in values:
             # Write to a file for later processing
-            dataFile.write('{0},{1}\n'.format(row[0], row[1]))
+            dataFile.write('{0},{1},{2}\n'.format(row[0], row[1], row[2]))
     
     dataFile.close()
             
-def emailSending():
-    # Garbage Var
-    x = 0
-    subject = []
-    text = []
+def teamleadProcessing():
+    # Var
+    teamleads = []
+    passwords = []
+    pMessage  = []
     
-    # Gmail Sign In
-    sender = 'aniket.rai@mytuition.co.nz'
-    passwd = 'devdeep71'
-    recipient = 'aniket@assemblyltd.com'
+    # Open teamlead information file
+    dataFile = open('teamleads.txt', 'r')
     
-    # Server setup
-    server=smtplib.SMTP('smtp.gmail.com', 587)
-    server.ehlo()
-    server.starttls()
-    server.login(sender, passwd)
-    
-    # Subject and Body Setup
-    dataFile = open('data.txt', 'r')
-    
+    # Sort through file and add to respective arrays
     for line in dataFile:
         data = line.split(',')
-        subject.append(data[0])
-        text.append(data[1])
+        teamleads.append(data[0])
+        passwords.append(data[1])
+        pMessage.append(data[2])
+    
+    # Process tutors for each teamlead
+    for counter in range(len(teamleads)):
+        tutorProcessing(teamleads[counter], passwords[counter], pMessage[counter])
+    
+def tutorProcessing(teamlead, password, pMessage):
+    # Var
+    tutors = []
+    personalisedMSG = []
+    
+    
+    # Get all tutors and sort them correctly 
+    teamleadName = teamlead.split(".")
+    teamleadName = teamleadName[0].capitalize()
+    tutorFile = open(teamleadName + ".txt", 'r')
+    tutors = tutorFile.readlines()
         
-    for teamlead in subject:
-        body = '\r\n'.join(['To: %s' % recipient,
-                            'From: %s' % sender,
-                            'Subject: %s' % teamlead,
-                            '', text[x]])
-        try:
-            server.sendmail(sender, [recipient], body)
-            print('email sent')
-            x += 1
-        except:
-            print('error occurred')
-            
-    
-    server.quit()
-    
+    for tutor1 in tutors:
+        tutor = tutor1.split(",")
+        tutorName = tutor[0]
+        tutorEmail = tutor[1].strip()
+        
+        message = MIMEMultipart("alternative")
+        message["Subject"] = "MyTuition Monthly Feedback Report"
+        message["From"] = teamlead
+        message["To"] = tutorEmail
+        
+        # Create the plain-text and HTML version of your message
+        greeting = "Hey " + tutorName + ",\n\n"
+        body = """Please find your monthly feedback report attached below. Please let us know if you have any questions or want to discuss this report further!\n\n"""
+        conclusion = "Cheers,\n" + teamleadName
+        text = greeting + pMessage + "\n" + body + conclusion
+        """html = \
+            <html>
+            <body>
+                <p>Hi,<br>
+                How are you?<br>
+                <a href="http://www.realpython.com">Real Python</a> 
+                has many great tutorials.
+                </p>
+            </body>
+            </html>
+        """
+        # Turn these into plain/html MIMEText objects
+        part1 = MIMEText(text, "plain")
+        #part2 = MIMEText(html, "html")
+
+        # Add HTML/plain-text parts to MIMEMultipart message
+        # The email client will try to render the last part first
+        message.attach(part1)
+        #message.attach(part2)
+
+        sendEmail(teamlead, password, tutorEmail, message.as_string())
+        
+def sendEmail(sender, password, receiver, message):
+    # Create secure connection with server and send email
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.login(sender, password)
+        server.sendmail(sender, receiver, message)
                             
 def main():
     getData()
-    emailSending()
+    teamleadProcessing()
 
 if __name__ == '__main__':
     main()
