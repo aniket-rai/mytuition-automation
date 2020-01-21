@@ -88,7 +88,9 @@ def tutorProcessing(teamlead, password, pMessage):
     
     # Get all tutors and sort them correctly 
     teamleadName = teamlead.split(".")
-    teamleadName = teamleadName[0].capitalize()
+    teamleadLast = teamleadName[1].capitalize().strip()
+    teamleadLast = teamleadLast[:-10]
+    teamleadName = teamleadName[0].capitalize().strip()
     tutorFile = open(teamleadName + ".txt", 'r')
     tutors = tutorFile.readlines()
         
@@ -97,20 +99,19 @@ def tutorProcessing(teamlead, password, pMessage):
         tutorName = tutor[0]
         tutorEmail = tutor[1].strip()
         
-        message = MIMEMultipart("alternative")
+        message = MIMEMultipart()
         message["Subject"] = "MyTuition Monthly Feedback Report"
-        message["From"] = teamlead
+        message["From"] = teamleadName + " " + teamleadLast
         message["To"] = tutorEmail
         
         # Create the plain-text and HTML version of your message
         greeting = "Hey " + tutorName + ",\n\n"
-        body = """Please find your monthly feedback report attached below. Please let us know if you have any questions or want to discuss this report further!\n\n"""
-        conclusion = "Cheers,\n" + teamleadName
+        body = """Please find your monthly feedback report attached below. Please let us know if you have any questions or want to discuss this report further! :)\n\n"""
+        conclusion = "Cheers,\n" + teamleadName + "\n"
         text = greeting + pMessage + "\n" + body + conclusion
         
         # Add plain-text parts to MIMEMultipart message
         message.attach(MIMEText(text, "plain"))
-        
         filename = "blank.pdf"
 
         with open(filename, "rb") as fil:
