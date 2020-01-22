@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import pickle
 import os.path
 from os.path import basename
@@ -49,7 +49,7 @@ def getData():
                                 range=RANGE_NAME).execute()
     values = result.get('values', [])
     
-    dataFile = open('teamleads.txt', 'w')
+    dataFile = open('teamleadData/teamleads.txt', 'w')
 
     if not values:
         print('No data found.')
@@ -67,7 +67,7 @@ def teamleadProcessing():
     pMessage  = []
     
     # Open teamlead information file
-    dataFile = open('teamleads.txt', 'r')
+    dataFile = open('teamleadData/teamleads.txt', 'r')
     
     # Sort through file and add to respective arrays
     for line in dataFile:
@@ -91,20 +91,22 @@ def tutorProcessing(teamlead, password, pMessage):
     teamleadLast = teamleadName[1].capitalize().strip()
     teamleadLast = teamleadLast[:-10]
     teamleadName = teamleadName[0].capitalize().strip()
-    tutorFile = open(teamleadName + ".txt", 'r')
+    tutorFile = open("teamleadData/" + teamleadName + ".txt", 'r')
     tutors = tutorFile.readlines()
         
     for tutor1 in tutors:
         tutor = tutor1.split(",")
         tutorName = tutor[0]
-        tutorEmail = tutor[1].strip()
+        tutorLast = tutor[1]
+        tutorEmail = tutor[2]
         
+        # Set up email fields
         message = MIMEMultipart()
         message["Subject"] = "MyTuition Monthly Feedback Report"
         message["From"] = teamleadName + " " + teamleadLast
         message["To"] = tutorEmail
         
-        # Create the plain-text and HTML version of your message
+        # Create the message
         greeting = "Hey " + tutorName + ",\n\n"
         body = """Please find your monthly feedback report attached below. Please let us know if you have any questions or want to discuss this report further! :)\n\n"""
         conclusion = "Cheers,\n" + teamleadName + "\n"
@@ -112,7 +114,9 @@ def tutorProcessing(teamlead, password, pMessage):
         
         # Add plain-text parts to MIMEMultipart message
         message.attach(MIMEText(text, "plain"))
-        filename = "blank.pdf"
+        
+        # Prep and attach report to the email
+        filename = "tutorReports/" + tutorName.lower() + ".pdf"
 
         with open(filename, "rb") as fil:
             part = MIMEApplication(
@@ -124,6 +128,7 @@ def tutorProcessing(teamlead, password, pMessage):
         part['Content-Disposition'] = 'attachment; filename="%s"' % basename(filename)
         message.attach(part)
 
+        # Send the email to the tutor
         sendEmail(teamlead, password, tutorEmail, message.as_string())
         
 def sendEmail(sender, password, receiver, message):
